@@ -2,30 +2,38 @@ import { NextPage } from "next";
 import { NamespaceSelector } from "../components/NamespaceSelector";
 import * as React from "react";
 import { useState } from "react";
-import { usePods, usePriorityClasses } from "../hooks/resources";
-import { groupBy } from "lodash";
+import { fetcher } from "../hooks/resources";
 import { Pod } from "../components/Pod";
 import { Panel } from "../components/Panel";
+import useSwr from "swr";
+import { K8sClientErrorResponse } from "./api/_types";
+import { PodByPriorityClassResponse } from "./api/pod-by-priority-class";
 
 const PodByPriorityClass: NextPage = () => {
   const [namespace, setNamespace] = useState<string>("");
-  const { data: priorityClasses, error: priorityClassesError } =
-    usePriorityClasses();
-  const { data: pods, error: podsError } = usePods(namespace);
+  const params = new URLSearchParams({
+    namespace,
+  });
+  const { data, error } = useSwr<
+    PodByPriorityClassResponse,
+    K8sClientErrorResponse
+  >(`/api/pod-by-priority-class?${params}`, fetcher);
 
-  if (priorityClassesError || podsError) {
+  if (error) {
     return (
-        <Panel><h2>Loading error: {priorityClassesError?.err || podsError?.err}</h2></Panel>
+      <Panel>
+        <h2>Loading error: {error?.err}</h2>
+      </Panel>
     );
   }
 
-  if (!priorityClasses || !pods) {
-    return <Panel><h1>Loading</h1></Panel>;
+  if (!data) {
+    return (
+      <Panel>
+        <h1>Loading</h1>
+      </Panel>
+    );
   }
-
-  const groupedPods = groupBy(pods.items, (pod) => {
-    return pod.spec?.priorityClassName || "none";
-  });
 
   return (
     <>
@@ -34,24 +42,20 @@ const PodByPriorityClass: NextPage = () => {
       </Panel>
       <Panel>
         <>
-          {priorityClasses.items
-            .sort((a, b) => (a.value > b.value ? -1 : 1))
-            .map((pClass) => {
-              return (
-                <div key={pClass.metadata?.uid}>
-                  <div>
-                    <strong>{pClass.metadata?.name}</strong>
-                  </div>
-                  <div>
-                    {groupedPods[pClass.metadata!.name!]
-                      ? groupedPods[pClass.metadata!.name!].map((pod) => (
-                          <Pod key={pod.metadata?.uid} pod={pod} />
-                        ))
-                      : null}
-                  </div>
+          {data.map((item) => {
+            return (
+              <div key={item.priorityClass.metadata?.uid}>
+                <div>
+                  <strong>{item.priorityClass.metadata?.name}</strong>
                 </div>
-              );
-            })}
+                <div>
+                  {item.pods.map((pod) => (
+                    <Pod key={pod.metadata?.uid} pod={pod} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </>
       </Panel>
     </>
