@@ -20,6 +20,7 @@ This project will be developed from time to time. If you need some additional fe
 Dashboards:
 - Pods grouped by priorityClass
 - Workloads (Deploy, Sts, Ds) grouped by priorityClass
+- Useless toleration (Has no taint that can be tolerated)
 
 ## Getting Started
 

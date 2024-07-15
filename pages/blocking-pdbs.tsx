@@ -2,6 +2,7 @@ import { NextPage } from "next";
 import { NamespaceSelector } from "../components/NamespaceSelector";
 import { useState } from "react";
 import {
+  fetcher,
   useDaemonSets,
   useDeployments,
   usePdbs,
@@ -14,41 +15,28 @@ import { Deployment } from "../components/Deployment";
 import { StatefulSet } from "../components/StatefulSet";
 import { DaemonSet } from "../components/DaemonSet";
 import { Panel } from "../components/Panel";
+import useSwr from "swr";
+import { PodByPriorityClassResponse } from "./api/pod-by-priority-class";
+import { K8sClientErrorResponse } from "./api/_types";
+import * as React from "react";
 
-const IncorrectPdb: NextPage = () => {
+const BlockingPdbs: NextPage = () => {
   const [namespace, setNamespace] = useState<string>("");
-  const { data: deployments, error: deploymentsError } =
-    useDeployments(namespace);
-  const { data: statefulSets, error: statefulSetsError } =
-    useStatefulSets(namespace);
-  const { data: daemonSets, error: daemonSetsError } = useDaemonSets(namespace);
-  const { data: pdbs, error: pdbsError } = usePdbs(namespace);
+  const params = new URLSearchParams({
+    namespace,
+  });
+  const { data, error } = useSwr<
+    PodByPriorityClassResponse,
+    K8sClientErrorResponse
+  >(`/api/blocking-pdbs?${params}`, fetcher);
 
-  if (deploymentsError || statefulSetsError || daemonSetsError || pdbsError) {
+  if (error) {
     return (
-      <div>
-        Loading error:{" "}
-        {deploymentsError?.err ||
-          statefulSetsError?.err ||
-          daemonSetsError?.err ||
-          pdbsError?.err}
-      </div>
+      <Panel>
+        <h2>Loading error: {error?.err}</h2>
+      </Panel>
     );
   }
-
-  if (!deployments || !statefulSets || !daemonSets || !pdbs) {
-    return <div>Loading</div>;
-  }
-
-  const groupedDeployments = groupBy(deployments.items, (resource) => {
-    return resource.spec?.template?.spec?.priorityClassName || "none";
-  });
-  const groupedStatefulSets = groupBy(statefulSets.items, (resource) => {
-    return resource.spec?.template?.spec?.priorityClassName || "none";
-  });
-  const groupedDaemonSets = groupBy(daemonSets.items, (resource) => {
-    return resource.spec?.template?.spec?.priorityClassName || "none";
-  });
 
   return (
     <>
@@ -110,4 +98,4 @@ const IncorrectPdb: NextPage = () => {
   );
 };
 
-export default IncorrectPdb;
+export default BlockingPdbs;

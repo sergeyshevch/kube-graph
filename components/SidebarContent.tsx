@@ -10,6 +10,7 @@ export const DashboardsList = () => {
     const items = [
         {text: "Pod by PriorityClass", link: "/pod-by-priority-class", icon: <DashboardIcon/>},
         {text: "Workload by PriorityClass", link: "/workload-by-priority-class", icon: <DashboardIcon/>},
+        {text: "Useless tolerations", link: "/useless-tolerations", icon: <DashboardIcon/>},
         {text: "Incorrect PDB", link: "/incorrect-pdb", icon: <DashboardIcon/>},
     ]
     return <React.Fragment>
